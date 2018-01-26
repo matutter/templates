@@ -1,0 +1,30 @@
+geo $remote_addr $local_traffic {
+     default false;
+     {{ internal_ip }}/24 true;
+}
+
+server {
+    server_name {{ server_name  }};
+    listen {{ external_port }} ssl http2;
+    listen [::]:{{ external_port }} ssl  http2;
+
+    if ( $local_traffic = 'false' ) {
+      return 444;
+    }
+
+    ssl_certificate     {{ path_to_fullchain  }};
+    ssl_certificate_key {{ path_to_privkey }};
+    include             {{ path_to_nginx_ssl_conf  }};
+    ssl_dhparam         {{ path_to_ssl_dhparams_pem }};
+
+    proxy_set_header HOST $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    location / {
+      proxy_pass {{ internal_proto }}{{ internal_domain }}{{ internal_port }};
+    }
+
+}
+
